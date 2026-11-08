@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Laboratorio Fe–C móvil</title>
+<meta name="theme-color" content="#e9ecef">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: app de una columna para el pulgar. Barra de estado arriba, una vista por pestaña, mando fijo abajo (ajustes · proceso · pestañas). */
+:root{
+  --bg:#e9ecef; --surface:#f8f9fa; --ink:#18202a; --muted:#566271; --line:#c8cfd7; --accent:#2b5d8c;
+  --gamma:#3474c0; --alpha:#c7871a; --cem:#8b3b8f; --carbon:#d23a28; --catom:#2e3238;
+  --f-display:'Archivo', 'Arial Narrow', system-ui, sans-serif;
+  --f-body:'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --dock-h:170px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#11151a; --surface:#192028; --ink:#e2e7ec; --muted:#97a3b0; --line:#2e3843; --accent:#83b2e0;
+  --gamma:#5f9be3; --alpha:#e6ad45; --cem:#bf73c3; --carbon:#ff6b54; --catom:#cfd4db; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#11151a; --surface:#192028; --ink:#e2e7ec; --muted:#97a3b0; --line:#2e3843; --accent:#83b2e0;
+  --gamma:#5f9be3; --alpha:#e6ad45; --cem:#bf73c3; --carbon:#ff6b54; --catom:#cfd4db; color-scheme:dark }
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%; text-size-adjust:100%}
+body{background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.5; padding-bottom:calc(var(--dock-h) + env(safe-area-inset-bottom, 0px))}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:30; background:var(--surface)}
+.pad{padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px))}
+button, select, input{font:inherit; color:var(--ink); touch-action:manipulation}
+button{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:0 12px; min-height:44px; cursor:pointer; line-height:1.15}
+button:disabled{opacity:.4}
+button[aria-pressed="true"], [role=tab][aria-selected="true"]{background:var(--accent); border-color:var(--accent); color:var(--surface)}
+button.primary{background:var(--ink); border-color:var(--ink); color:var(--surface); font-weight:600}
+button.primary[aria-pressed="true"]{background:var(--accent); border-color:var(--accent)}
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.mono{font-family:var(--f-mono); font-variant-numeric:tabular-nums}
+.lbl{font-family:var(--f-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+
+/* barra de estado */
+.topbar{position:sticky; top:env(safe-area-inset-top, 0px); z-index:20; background:var(--surface); border-bottom:1px solid var(--line); padding-block:8px}
+.bar-in{display:flex; align-items:center; gap:8px 10px; flex-wrap:wrap}
+.brand{white-space:nowrap; font-family:var(--f-display); font-stretch:78%; font-weight:750; font-size:20px; line-height:1; margin:0}
+.brand span{color:var(--accent)}
+.reg{font-family:var(--f-display); font-stretch:85%; font-weight:700; font-size:15px; padding:2px 9px; border-radius:20px; color:var(--surface); background:var(--gamma); white-space:nowrap}
+#st-ct{font-size:13.5px; white-space:nowrap}
+.status{flex-basis:100%; font-family:var(--f-mono); font-size:12px; color:var(--muted); min-height:1em}
+
+.hint{margin:10px 0 0; padding:10px 12px; background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:6px; font-size:14.5px; line-height:1.45}
+.hint b{font-weight:650}
+.hint.flash{animation:flash 1.4s ease-out}
+@keyframes flash{from{background:color-mix(in srgb, var(--accent) 22%, var(--surface))} to{background:var(--surface)}}
+@media (prefers-reduced-motion: reduce){ .hint.flash{animation:none} }
+
+/* vistas */
+.view{padding-block:12px 20px; display:flex; flex-direction:column; gap:10px}
+.view h2{margin:0; font-family:var(--f-display); font-stretch:85%; font-size:22px; font-weight:700; line-height:1.15}
+.sub{margin:-4px 0 0; font-size:13.5px; color:var(--muted)}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:8px; overflow:hidden; min-width:0}
+.cap{font-size:14px; color:var(--muted); display:flex; flex-direction:column; gap:6px; min-width:0}
+.cap b{color:var(--ink); font-weight:600}
+details{background:var(--surface); border:1px solid var(--line); border-radius:8px}
+summary{list-style:none; cursor:pointer; padding:12px 14px; font-weight:600; font-size:15px; display:flex; justify-content:space-between; align-items:center; min-height:44px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+"; color:var(--accent); font-size:20px; line-height:1}
+details[open] summary::after{content:"−"}
+.dbody{padding:0 14px 14px; font-size:14px; color:var(--muted); display:flex; flex-direction:column; gap:8px}
+.dbody b{color:var(--ink)}
+.dbody p{margin:0}
+.stage{position:relative; aspect-ratio:1/1; width:100%; max-width:100%}
+#diagram, #thermal{display:block; width:100%; height:auto; touch-action:none; user-select:none; -webkit-user-select:none}
+#crystal-stage canvas{display:block; width:100%; height:100%; touch-action:none}
+#micro{display:block; width:100%; height:100%; background:#111}
+.fallback{position:absolute; inset:0; display:grid; place-items:center; padding:24px; text-align:center; color:var(--muted)}
+.ptabs{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px}
+.ptabs button{font-size:13px; padding:4px 6px}
+[role=tab].new::after{content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--carbon); margin-left:5px; vertical-align:1px}
+.ttt-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch}
+#ttt-svg{display:block; width:100%; min-width:560px; height:auto}
+.ttt-warn{margin:0; font-size:14px; padding:10px 12px; border-radius:6px; background:var(--surface); border:1px solid var(--line)}
+
+/* SVG: letras algo mayores que en el proyector, para leerse en el teléfono */
+.ax{stroke:var(--muted); stroke-width:1; fill:none}
+.tick{fill:var(--muted); font-family:var(--f-mono); font-size:12.5px}
+.tick.key{fill:var(--accent); font-weight:500}
+.grid-l{stroke:var(--line); stroke-width:.6}
+.bnd{fill:none; stroke:var(--ink); stroke-width:1.8; stroke-linejoin:round}
+.bnd.thin{stroke-width:1.1}
+.r-g{fill:var(--gamma); fill-opacity:.15}
+.r-ag{fill:var(--alpha); fill-opacity:.15}
+.r-a{fill:var(--alpha); fill-opacity:.4}
+.r-gc{fill:var(--cem); fill-opacity:.12}
+.r-ac{fill:var(--muted); fill-opacity:.07}
+.rl{fill:var(--ink); font-family:var(--f-body); font-size:14px; font-weight:600}
+.rl.sub{font-weight:400; fill:var(--muted); font-size:12px}
+.ln{fill:var(--accent); font-family:var(--f-mono); font-size:12.5px; font-weight:500}
+.comp{stroke:var(--ink); stroke-width:1; stroke-dasharray:3 3; opacity:.6}
+.tie{stroke:var(--ink); stroke-width:2.2}
+.tie-end{fill:var(--surface); stroke:var(--ink); stroke-width:1.8}
+.mark{fill:var(--carbon); stroke:var(--surface); stroke-width:2}
+.mark-ring{fill:none; stroke:var(--carbon); stroke-width:1.4; opacity:.5}
+.tie-lbl{fill:var(--ink); font-family:var(--f-mono); font-size:12px}
+.crit-l{stroke:var(--accent); stroke-width:1.1; stroke-dasharray:5 4}
+.crit-pt{fill:var(--accent)}
+.curve{fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round}
+.now-l{stroke:var(--carbon); stroke-width:1; opacity:.5}
+.now-h{stroke:var(--carbon); stroke-width:1.3; stroke-dasharray:2 3; opacity:.8}
+.ttt-c{fill:none; stroke:var(--ink); stroke-width:2.2}
+.ttt-h{fill:none; stroke:var(--ink); stroke-width:1; stroke-dasharray:4 4; opacity:.6}
+.ttt-m{stroke:var(--accent); stroke-width:1.2; stroke-dasharray:6 4}
+.ttt-r{fill:var(--ink); font-family:var(--f-body); font-size:12.5px; font-weight:600}
+.ttt-r.sub{font-weight:400; fill:var(--muted); font-size:11.5px}
+
+/* leyendas y lectura */
+.legend{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:13.5px; color:var(--muted)}
+.sw{display:inline-block; width:12px; height:12px; border-radius:2px; margin-right:6px; vertical-align:-1px; border:1px solid var(--line)}
+.dot{display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:-1px}
+.site{display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:color-mix(in srgb, var(--muted) 35%, transparent); border:1px solid color-mix(in srgb, var(--muted) 70%, transparent)}
+.areas{display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:2px 12px; font-size:13.5px}
+.areas .h{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.05em; text-transform:uppercase}
+.areas .n{font-family:var(--f-mono); font-variant-numeric:tabular-nums; text-align:right; color:var(--ink)}
+.state{font-family:var(--f-display); font-stretch:85%; font-size:24px; font-weight:700; margin:0; line-height:1.15}
+.state small{display:block; font-family:var(--f-body); font-stretch:100%; font-size:14px; color:var(--muted); font-weight:400; margin-top:4px}
+.crit{display:flex; flex-wrap:wrap; gap:6px}
+.chip{font-family:var(--f-mono); font-size:12px; padding:3px 8px; border:1px solid var(--line); border-radius:4px; color:var(--muted); background:var(--surface)}
+.chip b{color:var(--ink); font-weight:500}
+.explain{margin:0; font-size:15px}
+.ph-list{display:flex; flex-direction:column; gap:12px}
+.prow{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:3px 12px; align-items:baseline}
+.prow .nm{font-weight:600; font-size:15px}
+.prow .nm em{font-style:normal; font-weight:400; color:var(--muted); font-size:13px; margin-left:6px}
+.prow .pc{font-family:var(--f-mono); font-size:14px}
+.bar{grid-column:1/-1; height:10px; background:var(--bg); border-radius:3px; overflow:hidden}
+.bar span{display:block; height:100%; border-radius:3px}
+.bar.striped span{background-image:repeating-linear-gradient(90deg, var(--alpha) 0 7px, var(--cem) 7px 8px) !important}
+.prow .cc{grid-column:1/-1; font-size:13px; color:var(--muted)}
+.sect{font-family:var(--f-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:4px 0 0}
+.sect small{text-transform:none; letter-spacing:0}
+
+/* mando inferior */
+.dock{position:fixed; left:0; right:0; bottom:0; z-index:25; background:var(--surface); border-top:1px solid var(--line);
+  padding-top:8px; padding-bottom:calc(6px + env(safe-area-inset-bottom, 0px)); display:flex; flex-direction:column; gap:8px; box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+.dock-row{display:flex; gap:6px}
+.sheet-btn{flex:1 1 auto; display:flex; justify-content:space-between; align-items:center; gap:8px; min-height:40px; text-align:left}
+.sheet-btn b{font-family:var(--f-mono); font-weight:500; font-size:14px}
+.sheet-btn .lbl::after{content:" ▴"}
+.sheet-btn[aria-expanded="true"] .lbl::after{content:" ▾"}
+.proc{display:grid; grid-template-columns:1fr 1fr 1fr 48px; gap:6px}
+.proc button{font-size:14.5px; padding:0 6px}
+.tabs{display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); border-top:1px solid var(--line); margin-top:2px}
+.tabs button{border:none; border-radius:0; background:transparent; min-height:48px; padding:4px 2px; font-size:12px; font-weight:600; color:var(--muted); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px}
+.tabs button::before{content:""; width:22px; height:3px; border-radius:2px; background:transparent}
+.tabs button[aria-selected="true"]{background:transparent; color:var(--accent)}
+.tabs button[aria-selected="true"]::before{background:var(--accent)}
+
+/* hoja de ajustes */
+.sheet{position:fixed; left:0; right:0; bottom:calc(var(--dock-h) + env(safe-area-inset-bottom, 0px)); z-index:24; max-height:min(68dvh, 560px); overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+  background:var(--surface); border-top:1px solid var(--line); border-radius:14px 14px 0 0; box-shadow:0 -10px 30px rgba(0,0,0,.18); padding-block:14px 16px}
+.sheet-in{display:flex; flex-direction:column; gap:16px}
+.sheet-head{display:flex; justify-content:space-between; align-items:center}
+.sheet-head h3{margin:0; font-family:var(--f-display); font-stretch:85%; font-size:19px}
+.ctl{display:flex; flex-direction:column; gap:6px}
+.ctl .lbl output{color:var(--ink); font-weight:500; letter-spacing:0; text-transform:none; font-size:15px; margin-left:6px}
+.help{font-size:12.5px; color:var(--muted); line-height:1.4}
+.presets{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.presets button{font-size:14px; padding:6px 8px}
+.step{display:grid; grid-template-columns:repeat(4, 1fr); gap:6px}
+.step button{min-height:40px; font-family:var(--f-mono); font-size:14px}
+select{font-size:16px; min-height:44px; padding:0 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); width:100%}
+input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:40px; background:transparent; margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:6px; border-radius:3px; background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:28px; height:28px; border-radius:50%; background:var(--accent); border:3px solid var(--surface); box-shadow:0 0 0 1px var(--accent); margin-top:-11px}
+input[type=range]::-moz-range-track{height:6px; border-radius:3px; background:var(--line)}
+input[type=range]::-moz-range-thumb{width:22px; height:22px; border-radius:50%; background:var(--accent); border:3px solid var(--surface)}
+.scrim{position:fixed; inset:0; z-index:23; background:rgba(0,0,0,.25)}
+
+@media (min-width:700px){ .view, .hint{max-width:640px; margin-left:auto; margin-right:auto} .dock > *, .sheet-in{max-width:640px; width:100%; margin-left:auto; margin-right:auto} }
+</style>
+
+<style>[hidden]{display:none!important} body{margin:0} img{max-width:100%}</style>
+</head>
+<body>
+<header class="topbar pad">
+  <div class="bar-in">
+    <p class="brand">Laboratorio <span>Fe–C</span></p>
+    <span class="reg" id="st-reg">γ</span>
+    <span class="mono" id="st-ct"></span>
+    <span class="status" id="sim-status"></span>
+  </div>
+</header>
+
+<div class="pad">
+  <p class="hint" id="hint" role="status"><b>Para empezar:</b> toca «Acero y temperatura» abajo para elegir un acero y pulsa «Enfriar». Cambia de vista con las pestañas inferiores: todas avanzan juntas.</p>
+</div>
+
+<main class="pad">
+  <section class="view" id="tab-diag" aria-label="Diagrama Fe–Fe₃C">
+    <h2>Diagrama Fe–Fe₃C</h2>
+    <p class="sub">Toca o arrastra dentro del diagrama para elegir %C y temperatura.</p>
+    <div class="card">
+      <svg id="diagram" viewBox="0 0 520 400" role="img" aria-label="Diagrama de fases hierro-carbono con el punto seleccionado"><g id="dg-static"></g><g id="dg-dyn"></g></svg>
+    </div>
+    <div class="cap" id="dg-cap"></div>
+    <details>
+      <summary>Cómo leer el diagrama</summary>
+      <div class="dbody">
+        <p>Cada región indica qué fases son estables para una composición (eje horizontal) y una temperatura (eje vertical). La línea vertical punteada es tu acero.</p>
+        <p>En las regiones de dos fases, la <b>isoterma</b> une la composición de cada fase y permite calcular sus proporciones con la regla de la palanca (pestaña «Fases»).</p>
+      </div>
+    </details>
+  </section>
+
+  <section class="view" id="tab-curva" aria-label="Curva térmica" hidden>
+    <h2>Curva térmica</h2>
+    <p class="sub">Misma escala de temperatura que el diagrama. En pausa, arrastra sobre la curva para volver a un instante.</p>
+    <div class="card"><svg id="thermal" viewBox="0 0 520 400" role="img" aria-label="Temperatura frente al tiempo de la animación"></svg></div>
+    <div class="legend"><span><span class="sw" style="background:var(--gamma)"></span>γ</span><span><span class="sw" style="background:var(--alpha)"></span>α + γ</span><span><span class="sw" style="background:var(--cem)"></span>γ + Fe₃C</span><span><span class="sw" style="background:var(--ink)"></span>reacción en A1</span><span><span class="sw" style="background:var(--muted)"></span>α + Fe₃C</span></div>
+    <details>
+      <summary>Qué muestra la curva</summary>
+      <div class="dbody">
+        <p>Las líneas discontinuas son las temperaturas críticas de este acero (A1 y A3 o Acm), las mismas que en el diagrama.</p>
+        <p>El tiempo es el de la animación, no una predicción cinética. La meseta en A1 y el cambio de pendiente son cualitativos: indican que la transformación libera calor al enfriar (o lo absorbe al calentar), pero su duración aquí es arbitraria.</p>
+      </div>
+    </details>
+  </section>
+
+  <section class="view" id="tab-celda" aria-label="Celda unitaria" hidden>
+    <h2>Celda unitaria</h2>
+    <p class="sub">Arrastra con un dedo para girar; pellizca para acercar.</p>
+    <div class="ptabs" role="tablist" aria-label="Fase que se muestra">
+      <button type="button" role="tab" data-ph="a" aria-selected="false">Ferrita α<br>BCC</button>
+      <button type="button" role="tab" data-ph="g" aria-selected="true">Austenita γ<br>FCC</button>
+      <button type="button" role="tab" data-ph="c" aria-selected="false">Cementita<br>Fe₃C</button>
+    </div>
+    <p class="help" style="margin:0">Solo se activan las fases presentes a esta temperatura; un punto marca la que acaba de aparecer.</p>
+    <div class="card"><div class="stage" id="crystal-stage"></div></div>
+    <details open>
+      <summary>Detalle de la celda</summary>
+      <div class="dbody cap" id="cr-cap"></div>
+    </details>
+  </section>
+
+  <section class="view" id="tab-micro" aria-label="Micrografía" hidden>
+    <h2>Micrografía</h2>
+    <p class="sub">Esquema sin escala. Cambia entre microconstituyentes y fases en «Acero y temperatura».</p>
+    <div class="card"><div class="stage"><canvas id="micro" aria-label="Micrografía esquemática del acero"></canvas></div></div>
+    <div class="cap" id="mc-cap"></div>
+  </section>
+
+  <section class="view" id="tab-fases" aria-label="Fases y microconstituyentes" hidden>
+    <p class="state" id="ro-state"></p>
+    <div class="crit" id="ro-crit"></div>
+    <p class="explain" id="ro-explain"></p>
+    <div class="sect">Fases <small>· cristales con estructura y composición propias · % en masa</small></div>
+    <div class="ph-list" id="ro-phases"></div>
+    <div class="sect">Microconstituyentes <small>· lo que se distingue al microscopio · % en masa</small></div>
+    <div class="ph-list" id="ro-const"></div>
+    <details>
+      <summary>Qué está simplificado</summary>
+      <div class="dbody">
+        <p>Se supone enfriamiento lento (equilibrio) sobre el diagrama metaestable Fe–Fe₃C. Las líneas A3 y Acm siguen valores de referencia habituales, interpolados.</p>
+        <p>La celda unitaria dibuja los átomos con radio reducido para que se vea su geometría. La micrografía es un esquema sin escala: el tamaño de grano es arbitrario y el espaciado de la perlita está exagerado (en la realidad es de 0,1 a 0,5 µm).</p>
+        <p>La austenita de un acero al carbono no sobrevive a temperatura ambiente, así que las imágenes por encima de A1 son esquemas. Un enfriamiento rápido no deja tiempo a que el carbono difunda y produce bainita o martensita, fuera del equilibrio; el diagrama TTT de referencia lo ilustra.</p>
+      </div>
+    </details>
+  </section>
+
+  <section class="view" id="tab-ttt" aria-label="Diagrama TTT" hidden>
+    <h2>Diagrama TTT</h2>
+    <p class="sub">Ejemplo didáctico para un acero eutectoide de referencia (0,76 %C). Desliza el gráfico hacia los lados.</p>
+    <p class="ttt-warn" id="ttt-warn"></p>
+    <div class="card ttt-scroll"><svg id="ttt-svg" viewBox="0 0 640 400" role="img" aria-label="Diagrama TTT esquemático de un acero eutectoide"></svg></div>
+    <div class="cap">
+      <span><b>Qué representa.</b> Transformaciones <b>isotérmicas</b>: la austenita se enfría muy rápido hasta una temperatura y se mantiene allí. Cada horizontal se lee de izquierda a derecha: al cruzar la curva de inicio empieza la transformación y al cruzar la de fin termina.</span>
+      <span><b>Qué no representa.</b> No sirve para leer el enfriamiento continuo de la animación; para eso se usan los diagramas CCT. Las curvas son esquemáticas y los tiempos, orientativos: no salen de un modelo cinético.</span>
+    </div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet pad" id="sheet" aria-label="Acero y temperatura" hidden>
+  <div class="sheet-in">
+    <div class="sheet-head"><h3>Acero y temperatura</h3><button type="button" id="close-sheet">Listo</button></div>
+    <div class="ctl">
+      <span class="lbl">Acero</span>
+      <div class="presets" id="presets">
+        <button type="button" data-c="0.20">0,20 %C<br>tipo 1020</button>
+        <button type="button" data-c="0.45">0,45 %C<br>tipo 1045</button>
+        <button type="button" data-c="0.76">0,76 %C<br>eutectoide</button>
+        <button type="button" data-c="1.20">1,20 %C<br>hipereutectoide</button>
+      </div>
+      <span class="help">Composiciones predefinidas: cada botón fija el %C del acero.</span>
+    </div>
+    <div class="ctl">
+      <label class="lbl" for="c-range">Carbono <output id="c-out" for="c-range"></output></label>
+      <input id="c-range" type="range" min="0" max="2" step="0.01" value="0.45">
+      <div class="step"><button type="button" data-dc="-0.1">−0,1</button><button type="button" data-dc="-0.01">−0,01</button><button type="button" data-dc="0.01">+0,01</button><button type="button" data-dc="0.1">+0,1</button></div>
+      <span class="help">Ajuste fino del %C, de 0 a 2 %. Usa los botones para copiar valores exactos de la clase.</span>
+    </div>
+    <div class="ctl">
+      <label class="lbl" for="t-range">Temperatura <output id="t-out" for="t-range"></output></label>
+      <input id="t-range" type="range" min="500" max="1100" step="1" value="1000">
+      <div class="step"><button type="button" data-dt="-10">−10 °C</button><button type="button" data-dt="-1">−1 °C</button><button type="button" data-dt="1">+1 °C</button><button type="button" data-dt="10">+10 °C</button></div>
+      <span class="help">Salta a una temperatura en equilibrio. Detiene el proceso en curso.</span>
+    </div>
+    <div class="ctl">
+      <label class="lbl" for="micro-mode">Micrografía</label>
+      <select id="micro-mode">
+        <option value="nital">Microconstituyentes (aspecto con nital)</option>
+        <option value="phase">Fases (α, γ, Fe₃C por color)</option>
+      </select>
+      <span class="help">Microconstituyentes: lo que distingue el microscopio. Fases: α, γ y Fe₃C.</span>
+    </div>
+  </div>
+</section>
+
+<nav class="dock pad" id="dock" aria-label="Controles">
+  <div class="dock-row">
+    <button type="button" class="sheet-btn" id="open-sheet" aria-expanded="false" aria-controls="sheet"><span class="lbl">Acero y temperatura</span><b id="sheet-sum"></b></button>
+  </div>
+  <div class="proc">
+    <button type="button" class="primary" id="cool" aria-pressed="false">Enfriar</button>
+    <button type="button" id="heat" aria-pressed="false">Calentar</button>
+    <button type="button" id="pause" disabled>Pausar</button>
+    <button type="button" id="reset" disabled aria-label="Reiniciar">↺</button>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Vistas">
+    <button type="button" role="tab" data-tab="diag" aria-selected="true">Diagrama</button>
+    <button type="button" role="tab" data-tab="curva" aria-selected="false">Curva</button>
+    <button type="button" role="tab" data-tab="celda" aria-selected="false">Celda</button>
+    <button type="button" role="tab" data-tab="micro" aria-selected="false">Micro</button>
+    <button type="button" role="tab" data-tab="fases" aria-selected="false">Fases</button>
+    <button type="button" role="tab" data-tab="ttt" aria-selected="false">TTT</button>
+  </div>
+</nav>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmt = (x, d=2) => x.toLocaleString('es', {minimumFractionDigits:d, maximumFractionDigits:d});
+const fmtC = c => fmt(c, c < 0.1 ? 3 : 2);
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function tok(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function hexRgb(h){ h=(h||'#888').replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); return [n>>16&255, n>>8&255, n&255]; }
+const mix = (a,b,t) => [0,1,2].map(i => Math.round(a[i]*(1-t)+b[i]*t));
+
+/* ---------- Sistema Fe–Fe3C (metaestable) ---------- */
+const E = 0.76, CA = 0.022, CC = 6.67, A1 = 727;
+const FAP = (CC-E)/(CC-CA);            // fracción de ferrita dentro de la perlita (≈ 0,889)
+const A3pts  = [[0,912],[0.1,882],[0.2,853],[0.3,828],[0.4,806],[0.5,786],[0.6,764],[0.76,727]];
+const Acmpts = [[0.76,727],[1.0,795],[1.2,850],[1.4,905],[1.6,960],[1.8,1025],[2.0,1095],[2.11,1148]];
+const solvPts = [[500,0.004],[600,0.008],[727,0.022]];
+function interp(pts, x){
+  if (x <= pts[0][0]) return pts[0][1];
+  for (let i=1;i<pts.length;i++) if (x <= pts[i][0]){ const [x0,y0]=pts[i-1],[x1,y1]=pts[i]; return y0+(y1-y0)*(x-x0)/(x1-x0); }
+  return pts[pts.length-1][1];
+}
+const A3 = c => interp(A3pts, c);
+const Acm = c => interp(Acmpts, c);
+const A3inv = T => interp(A3pts.map(([c,t])=>[t,c]).reverse(), T);
+const AcmInv = T => interp(Acmpts.map(([c,t])=>[t,c]), T);
+const alphaMax = T => T >= A1 ? CA*(912-T)/(912-A1) : interp(solvPts, T);
+const atomRatio = w => (w/12.011) / ((100-w)/55.845);   // átomos de C por átomo de Fe
+const frAt = C => C <= CA ? 0 : C <= E ? 1-(E-C)/(E-CA) : 1-(C-E)/(CC-E); // austenita que llega a A1
+
+const PH = {
+  a:{name:'Ferrita α', struct:'BCC', color:'--alpha'},
+  g:{name:'Austenita γ', struct:'FCC', color:'--gamma'},
+  c:{name:'Cementita Fe₃C', struct:'ortorrómbica', color:'--cem'},
+};
+const CONS = {
+  f:{n:'Ferrita', col:'--alpha'},
+  pf:{n:'Ferrita proeutectoide', col:'--alpha'},
+  pc:{n:'Cementita proeutectoide', col:'--cem'},
+  p:{n:'Perlita (láminas α + Fe₃C)', col:'--alpha', striped:true},
+  g:{n:'Austenita', col:'--gamma'},
+};
+
+function computeState(C, T, Xe){
+  const s = {C, T, Xe:0, phases:[], cons:[], micro:{fa:0, fc:0, xe:0}, region:'', arrest:false};
+  const above = T > A1 + 1e-6 || (Math.abs(T-A1) <= 1e-6 && Xe <= 0);
+  const below = T < A1 - 1e-6 || (Math.abs(T-A1) <= 1e-6 && Xe >= 1) || C <= CA;
+  if (above && !(C <= CA && T < 912 && C <= alphaMax(T))){
+    if (C <= E && T < A3(C)){
+      const cg = A3inv(T), ca = alphaMax(T), fa = (cg-C)/(cg-ca);
+      s.region='α + γ'; s.phases=[{k:'a', c:ca, f:fa},{k:'g', c:cg, f:1-fa}]; s.micro.fa = fa;
+      s.cons=[{k:'pf', f:fa},{k:'g', f:1-fa}];
+    } else if (C > E && T < Acm(C)){
+      const cg = AcmInv(T), fc = (C-cg)/(CC-cg);
+      s.region='γ + Fe₃C'; s.phases=[{k:'g', c:cg, f:1-fc},{k:'c', c:CC, f:fc}]; s.micro.fc = fc;
+      s.cons=[{k:'pc', f:fc},{k:'g', f:1-fc}];
+    } else { s.region='γ'; s.phases=[{k:'g', c:C, f:1}]; s.cons=[{k:'g', f:1}]; }
+  } else if (below || C <= alphaMax(T)){
+    const ca = alphaMax(Math.min(T, A1));
+    s.Xe = 1; s.micro.xe = 1;
+    if (C <= ca || T > A1){ s.region='α'; s.phases=[{k:'a', c:C, f:1}]; s.micro.fa = 1; s.cons=[{k:'f', f:1}]; s.Xe = T > A1 ? 0 : 1; }
+    else {
+      const fa = (CC-C)/(CC-ca);
+      s.region='α + Fe₃C'; s.phases=[{k:'a', c:ca, f:fa},{k:'c', c:CC, f:1-fa}];
+      if (C <= E){ const fp = clamp((E-C)/(E-CA),0,1); s.micro.fa = fp; s.cons=[{k:'pf', f:fp},{k:'p', f:1-fp}]; }
+      else { const fp = (C-E)/(CC-E); s.micro.fc = fp; s.cons=[{k:'pc', f:fp},{k:'p', f:1-fp}]; }
+    }
+  } else {
+    // a 727 °C, reacción eutectoide en curso: γ(0,76) → α(0,022) + Fe3C(6,67)
+    s.arrest = true; s.Xe = Xe; s.micro.xe = Xe; s.region = 'α + γ + Fe₃C';
+    const fr = frAt(C);
+    if (C <= E){
+      const fp = 1-fr; s.micro.fa = fp;
+      s.phases=[{k:'a', c:CA, f:fp + Xe*fr*FAP},{k:'g', c:E, f:(1-Xe)*fr},{k:'c', c:CC, f:Xe*fr*(1-FAP)}];
+      s.cons=[{k:'pf', f:fp},{k:'p', f:Xe*fr},{k:'g', f:(1-Xe)*fr}];
+    } else {
+      const fp = 1-fr; s.micro.fc = fp;
+      s.phases=[{k:'a', c:CA, f:Xe*fr*FAP},{k:'g', c:E, f:(1-Xe)*fr},{k:'c', c:CC, f:fp + Xe*fr*(1-FAP)}];
+      s.cons=[{k:'pc', f:fp},{k:'p', f:Xe*fr},{k:'g', f:(1-Xe)*fr}];
+    }
+    s.phases = s.phases.filter(p => p.f > 1e-4);
+  }
+  s.cons = s.cons.filter(c => c.f > 1e-4);
+  return s;
+}
+const regionCode = st => st.arrest ? 'e' : ({'γ':'g','α + γ':'ag','γ + Fe₃C':'gc','α + Fe₃C':'ac','α':'a'})[st.region] || 'g';
+const REGION_COL = {g:'--gamma', ag:'--alpha', gc:'--cem', e:'--ink', ac:'--muted', a:'--alpha'};
+
+/* ---------- Estado de la app y de la simulación ---------- */
+const app = { C:0.45, T:1000, Xe:0, showC:true, microMode:'nital', lastKey:'' };
+const sim = { state:'idle', dir:0, t:0, hist:[], startT:1000, startXe:0, cursor:-1 };
+let S = computeState(app.C, app.T, app.Xe);
+sim.hist = [[0, app.T, app.Xe, regionCode(S)]];
+
+/* ---------- Diagrama ---------- */
+const svg = $('#diagram'), X0=58, X1=506, YB=360, YT=16, CMAX=2.2, TMIN=500, TMAX=1150;
+const xs = c => X0 + c/CMAX*(X1-X0);
+const ys = T => YB - (T-TMIN)/(TMAX-TMIN)*(YB-YT);
+const path = pts => pts.map(([c,t],i)=>(i?'L':'M')+xs(c).toFixed(1)+' '+ys(t).toFixed(1)).join(' ');
+function buildDiagram(){
+  const solv = [[0.022,727],[0.008,600],[0.004,500]];
+  const gPoly = [[0,TMAX],[0,912],...A3pts.slice(1),...Acmpts.slice(1),[2.11,TMAX]];
+  const agPoly = [...A3pts,[0.022,727],[0,912]];
+  const aPoly = [[0,912],[0.022,727],...solv.slice(1),[0,500]];
+  const gcPoly = [...Acmpts,[2.2,1148],[2.2,727]];
+  const acPoly = [[0.022,727],[2.2,727],[2.2,500],[0.004,500],[0.008,600]];
+  let h = '';
+  for (const t of [600,700,800,900,1000,1100]) h += `<line class="grid-l" x1="${X0}" x2="${X1}" y1="${ys(t)}" y2="${ys(t)}"/>`;
+  for (const c of [0.5,1,1.5,2]) h += `<line class="grid-l" x1="${xs(c)}" x2="${xs(c)}" y1="${YT}" y2="${YB}"/>`;
+  h += `<path class="r-ac" d="${path(acPoly)} Z"/><path class="r-g" d="${path(gPoly)} Z"/><path class="r-ag" d="${path(agPoly)} Z"/><path class="r-a" d="${path(aPoly)} Z"/><path class="r-gc" d="${path(gcPoly)} Z"/>`;
+  h += `<path class="bnd" d="${path(A3pts)}"/><path class="bnd" d="${path(Acmpts)}"/><path class="bnd" d="${path([[0.022,727],[2.2,727]])}"/>`;
+  h += `<path class="bnd thin" d="${path([[0,912],[0.022,727]])}"/><path class="bnd thin" d="${path(solv)}"/><path class="bnd thin" d="${path([[2.11,1148],[2.2,1148]])}"/>`;
+  h += `<path class="comp" style="opacity:.35" d="${path([[E,727],[E,500]])}"/>`;
+  h += `<text class="rl" x="${xs(1.0)}" y="${ys(1060)}">γ  austenita</text><text class="rl sub" x="${xs(1.0)}" y="${ys(1060)+14}">FCC · disuelve hasta 2,11 %C</text>`;
+  h += `<text class="rl" x="${xs(0.13)}" y="${ys(765)}">α + γ</text>`;
+  h += `<text class="rl" x="${xs(1.42)}" y="${ys(820)}">γ + Fe₃C</text>`;
+  h += `<text class="rl" x="${xs(1.05)}" y="${ys(545)}" text-anchor="middle">α + Fe₃C</text>`;
+  h += `<text class="rl sub" x="${xs(0.38)}" y="${ys(660)}" text-anchor="middle">ferrita + perlita</text><text class="rl sub" x="${xs(0.38)}" y="${ys(660)+12}" text-anchor="middle">hipoeutectoide</text>`;
+  h += `<text class="rl sub" x="${xs(1.5)}" y="${ys(660)}" text-anchor="middle">perlita + Fe₃C</text><text class="rl sub" x="${xs(1.5)}" y="${ys(660)+12}" text-anchor="middle">hipereutectoide</text>`;
+  h += `<text class="rl sub" x="${xs(0.06)}" y="${ys(590)}">α</text>`;
+  h += `<text class="ln" x="${xs(0.36)}" y="${ys(838)}">A3</text><text class="ln" x="${xs(1.62)}" y="${ys(985)}">Acm</text><text class="ln" x="${xs(2.2)-4}" y="${ys(727)-5}" text-anchor="end">A1 · 727 °C</text>`;
+  h += `<circle cx="${xs(E)}" cy="${ys(727)}" r="3.5" fill="var(--ink)"/><text class="ln" x="${xs(E)+6}" y="${ys(727)+14}">S · eutectoide</text>`;
+  h += `<circle cx="${xs(2.11)}" cy="${ys(1148)}" r="3" fill="var(--ink)"/><text class="ln" x="${xs(2.11)-6}" y="${ys(1148)+14}" text-anchor="end">E · 1148 °C</text>`;
+  h += `<path class="ax" d="M${X0} ${YT} V${YB} H${X1}"/>`;
+  for (const c of [0,0.5,1,1.5,2]) h += `<text class="tick" x="${xs(c)}" y="${YB+15}" text-anchor="middle">${fmt(c,c%1?1:0)}</text>`;
+  h += `<text class="tick key" x="${xs(E)}" y="${YB+15}" text-anchor="middle">0,76</text>`;
+  for (const t of [500,600,800,1000,1100]) h += `<text class="tick" x="${X0-6}" y="${ys(t)+3.5}" text-anchor="end">${t}</text>`;
+  for (const t of [727,912]) h += `<text class="tick key" x="${X0-6}" y="${ys(t)+3.5}" text-anchor="end">${t}</text>`;
+  h += `<text class="tick" x="${(X0+X1)/2}" y="${YB+32}" text-anchor="middle">% C en masa</text>`;
+  h += `<text class="tick" transform="translate(14 ${(YT+YB)/2}) rotate(-90)" text-anchor="middle">Temperatura (°C)</text>`;
+  $('#dg-static').innerHTML = h;
+}
+const critList = C => { const up = C <= E ? ['A3', A3(C)] : ['Acm', Acm(C)]; return up[1] - A1 > 0.5 ? [['A1', A1], up] : [['A1', A1]]; };
+function drawDiagram(){
+  const {C,T} = app; let h = '';
+  const y = ys(T);
+  h += `<line class="comp" x1="${xs(C)}" x2="${xs(C)}" y1="${YT}" y2="${YB}"/>`;
+  // temperaturas críticas de este acero: continúan en la curva térmica
+  for (const [, Tc] of critList(C)) if (Tc <= 1100){
+    h += `<line class="crit-l" x1="${xs(C)}" x2="${X1}" y1="${ys(Tc)}" y2="${ys(Tc)}" style="opacity:.6"/><circle class="crit-pt" cx="${xs(C)}" cy="${ys(Tc)}" r="3"/>`;
+  }
+  // isoterma del instante actual
+  h += `<line class="now-h" x1="${X0}" x2="${X1}" y1="${y}" y2="${y}"/>`;
+  if (S.arrest){
+    h += `<line class="tie" x1="${xs(CA)}" x2="${X1}" y1="${y}" y2="${y}"/>`;
+    for (const c of [CA, E]) h += `<circle class="tie-end" cx="${xs(c)}" cy="${y}" r="3.5"/>`;
+    h += `<text class="tie-lbl" x="${X1-2}" y="${y+14}" text-anchor="end">→ Fe₃C 6,67 %C · 3 fases</text>`;
+  } else if (S.phases.length === 2){
+    const c1 = S.phases[0].c, c2 = Math.min(S.phases[1].c, CMAX), off = S.phases[1].c > CMAX;
+    h += `<line class="tie" x1="${xs(c1)}" x2="${xs(c2)}" y1="${y}" y2="${y}"/><circle class="tie-end" cx="${xs(c1)}" cy="${y}" r="3.5"/>`;
+    if (!off) h += `<circle class="tie-end" cx="${xs(c2)}" cy="${y}" r="3.5"/>`;
+    else h += `<text class="tie-lbl" x="${X1-2}" y="${y+14}" text-anchor="end">→ Fe₃C 6,67 %C</text>`;
+  }
+  h += `<circle class="mark-ring" cx="${xs(C)}" cy="${y}" r="10"/><circle class="mark" cx="${xs(C)}" cy="${y}" r="5.5"/>`;
+  $('#dg-dyn').innerHTML = h;
+  let cap;
+  if (S.arrest) cap = `<span>A 727 °C coexisten <b>tres fases</b>: es el punto invariante eutectoide. En equilibrio la temperatura no baja hasta que toda la austenita de 0,76 %C se transforma en perlita.</span>`;
+  else if (S.phases.length === 2) cap = `<span>La <b>isoterma</b> une la composición de las dos fases a ${Math.round(T)} °C: <span class="mono">${S.phases.map(p=>`${PH[p.k].name.split(' ')[0]} ${fmtC(p.c)} %C`).join(' · ')}</span></span>`;
+  else cap = `<span>Una sola fase: <b>${PH[S.phases[0].k].name}</b> con todo el carbono (${fmt(C)} %C) en solución sólida.</span>`;
+  cap += `<span>Los puntos azules marcan dónde la vertical de este acero corta A1 y ${C <= E ? 'A3' : 'Acm'}; la línea punteada roja es la temperatura actual.</span>`;
+  $('#dg-cap').innerHTML = cap;
+}
+let dragging = false;
+function svgPoint(el, e){ const p = el.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; return p.matrixTransform(el.getScreenCTM().inverse()); }
+function fromSvg(e){ const p = svgPoint(svg, e); manualSet((p.x-X0)/(X1-X0)*CMAX, TMIN + (YB-p.y)/(YB-YT)*(TMAX-TMIN)); }
+svg.addEventListener('pointerdown', e => { dragging = true; svg.setPointerCapture(e.pointerId); fromSvg(e); });
+svg.addEventListener('pointermove', e => { if (dragging) fromSvg(e); });
+svg.addEventListener('pointerup', () => dragging = false);
+svg.addEventListener('pointercancel', () => dragging = false);
+
+/* ---------- Micrografía ---------- */
+const micro = (() => {
+  const cv = $('#micro'), N = 440, NN = N*N; cv.width = N; cv.height = N;
+  const ctx = cv.getContext('2d');
+  const off = document.createElement('canvas'); off.width = off.height = N; const octx = off.getContext('2d'), img = octx.createImageData(N, N);
+  const rng = mulberry32(11), cell = 88, seeds = [];
+  for (let gy=-1; gy<=5; gy++) for (let gx=-1; gx<=5; gx++) seeds.push([(gx+0.15+0.7*rng())*cell, (gy+0.15+0.7*rng())*cell]);
+  const G = seeds.length, gTint = seeds.map(()=> (rng()-0.5)*16), gRot = seeds.map(()=>rng());
+  const colCos = new Float32Array(G*3), colSin = new Float32Array(G*3), colTint = new Float32Array(G*3);
+  for (let i=0;i<G*3;i++){ const a = rng()*Math.PI; colCos[i]=Math.cos(a); colSin[i]=Math.sin(a); colTint[i]=(rng()-0.5)*14; }
+  function vnoise(cellSize){
+    const gw = Math.ceil(N/cellSize)+2, g = new Float32Array(gw*gw).map(()=>rng()*2-1), out = new Float32Array(NN);
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+      const fx=x/cellSize, fy=y/cellSize, ix=fx|0, iy=fy|0; let tx=fx-ix, ty=fy-iy; tx=tx*tx*(3-2*tx); ty=ty*ty*(3-2*ty);
+      const a=g[iy*gw+ix], b=g[iy*gw+ix+1], c=g[(iy+1)*gw+ix], d=g[(iy+1)*gw+ix+1];
+      out[y*N+x] = a+(b-a)*tx + (c-a)*ty + (a-b-c+d)*tx*ty;
+    }
+    return out;
+  }
+  const nz = vnoise(24), nz2 = vnoise(7);
+  const gid = new Uint8Array(NN), col = new Uint16Array(NN), dRaw = new Float32Array(NN), dA = new Float32Array(NN), dC = new Float32Array(NN), tex = new Int8Array(NN), vig = new Float32Array(NN);
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+    const i=y*N+x, px=x+0.5, py=y+0.5; let best=0, bd=1e12;
+    for (let g=0; g<G; g++){ const dx=px-seeds[g][0], dy=py-seeds[g][1], d=dx*dx+dy*dy; if (d<bd){bd=d;best=g;} }
+    const s = seeds[best]; let dm=1e9;
+    for (let t=0; t<G; t++){ if (t===best) continue;
+      const tx=seeds[t][0]-s[0], ty=seeds[t][1]-s[1], L=Math.hypot(tx,ty);
+      const dt=((px-seeds[t][0])**2+(py-seeds[t][1])**2-bd)/(2*L); if (dt<dm) dm=dt; }
+    gid[i]=best; dRaw[i]=dm;
+    dA[i] = dm + nz[i]*5 + nz2[i]*1.2;   // frente irregular de la ferrita
+    dC[i] = dm + nz[i]*1.1;              // red de cementita casi continua
+    const ang = Math.atan2(py-s[1], px-s[0]);
+    col[i] = best*3 + Math.floor(((ang+Math.PI)/(2*Math.PI)*3 + gRot[best]*3)) % 3;
+    tex[i] = Math.round((rng()-0.5)*7);
+    const r2 = ((px-N/2)**2+(py-N/2)**2)/((N/2)**2); vig[i] = 1 - 0.16*r2;
+  }
+  const sA = Float32Array.from(dA).sort(), sC = Float32Array.from(dC).sort();
+  const q = (arr,f) => f<=0 ? -Infinity : f>=1 ? Infinity : arr[Math.min(arr.length-1, Math.round(f*arr.length))];
+  const LAM = 6, CFR = 0.12;            // Fe3C ≈ 12 % del volumen de la perlita
+  let cache = '', areas = {}, dirty = true;
+
+  function render(st){
+    const {fa, fc, xe} = st.micro, nital = app.microMode === 'nital', d = img.data;
+    const useA = fa > 0 && fa < 1;
+    const key = useA ? dA : dC, sK = useA ? sA : sC, fpro = fa > 0 ? fa : fc;
+    const qPro = fa >= 1 ? Infinity : q(sK, fpro);
+    const qPear = xe > 0 ? q(sK, fpro + xe*(1-fpro)) : -Infinity;
+    let P;
+    if (nital) P = {fer:[232,230,225], gb:[72,70,68], edge:[128,124,118], cem:[248,247,243], cemE:[86,80,76], pf:[178,173,166], pc:[52,48,46], aus:[198,202,206], ausGb:[90,94,100]};
+    else {
+      const sf = hexRgb(tok('--surface')), ink = hexRgb(tok('--ink')), al = hexRgb(tok('--alpha')), ga = hexRgb(tok('--gamma')), ce = hexRgb(tok('--cem'));
+      P = {fer:mix(al,sf,.45), gb:mix(ink,sf,.25), edge:mix(ink,sf,.45), cem:ce, cemE:mix(ce,ink,.35), pf:mix(al,sf,.45), pc:ce, aus:mix(ga,sf,.55), ausGb:mix(ink,sf,.3)};
+    }
+    let nF=0, nPC=0, nP=0, nPcem=0, nG=0;
+    for (let i=0;i<NN;i++){
+      const k = key[i], dr = dRaw[i]; let c, tint = 0;
+      if (k < qPro && fa > 0){ nF++;
+        c = dr < 0.9 ? P.gb : (fa < 1 && k > qPro-1.3) ? P.edge : P.fer; tint = gTint[gid[i]]*0.5; }
+      else if (k < qPro){ nPC++; c = (k > qPro-1.1 || dr < 0.45) ? P.cemE : P.cem; }
+      else if (k < qPear){ nP++;
+        const ci = col[i], x = i%N, y = (i/N)|0, u = (x*colCos[ci] + y*colSin[ci])/LAM;
+        if ((u - Math.floor(u)) < CFR){ nPcem++; c = P.pc; } else c = P.pf;
+        tint = colTint[ci];
+        if ((xe < 1 && k > qPear-1.2) || (fpro > 0 && k < qPro+1.2)) c = P.edge;
+      } else { nG++;
+        c = (dr < 1 && fpro === 0 && xe === 0) ? P.ausGb : P.aus; tint = gTint[gid[i]];
+        if ((fpro > 0 && k < qPro+1.2) || (xe > 0 && k < qPear+1.2)) c = P.edge; }
+      const v = nital ? vig[i] : 1, t = nital ? tex[i] + tint : tint*0.4, j = i*4;
+      d[j]=clamp((c[0]+t)*v,0,255); d[j+1]=clamp((c[1]+t)*v,0,255); d[j+2]=clamp((c[2]+t)*v,0,255); d[j+3]=255;
+    }
+    octx.putImageData(img, 0, 0); dirty = true;
+    areas = fa >= 1 ? {f:nF/NN, pf:nF/NN} : {pf:nF/NN, pc:nPC/NN, p:nP/NN, g:nG/NN, pcem:nPcem/NN};
+  }
+  function update(st){
+    const k = [app.microMode, st.micro.fa.toFixed(4), st.micro.fc.toFixed(4), st.micro.xe.toFixed(3)].join('|');
+    if (k === cache) return; cache = k; render(st);
+  }
+  function step(){ if (!dirty) return; ctx.drawImage(off, 0, 0); dirty = false; }
+  return { update, step, refresh(){ cache=''; update(S); }, areas: () => areas };
+})();
+
+function microCaption(){
+  const nital = app.microMode === 'nital', sw = c => `<span class="sw" style="background:${c}"></span>`, ar = micro.areas();
+  const cOf = k => S.phases.find(p => p.k === k)?.c;
+  let items;
+  if (nital){
+    const it = {
+      f:[sw('rgb(232,230,225)'), 'Ferrita (clara)', fmtC(cOf('a') ?? app.C)],
+      pf:[sw('rgb(232,230,225)'), 'Ferrita proeutectoide (clara)', fmtC(cOf('a') ?? CA)],
+      pc:[sw('rgb(248,247,243)'), 'Cementita proeutectoide (blanca, borde oscuro)', '6,67'],
+      p:[sw('repeating-linear-gradient(90deg, rgb(52,48,46) 0 2px, rgb(178,173,166) 2px 6px)'), 'Perlita (láminas)', '0,76 de media'],
+      g:[sw('rgb(198,202,206)'), 'Austenita (esquema)', fmtC(cOf('g') ?? app.C)] };
+    items = S.cons.map(c => it[c.k]);
+  } else items = S.phases.map(p => [sw(`var(${PH[p.k].color})`), PH[p.k].name, fmtC(p.c)]);
+  let h = `<div class="legend"><span class="lbl" style="font-size:10px">${nital ? 'Microconstituyentes' : 'Fases'}</span>${items.map(([a,b,c]) => `<span>${a}${b} · <span class="mono">${c} %C</span></span>`).join('')}</div>`;
+  if (!nital && S.cons.some(c => c.k === 'p')) h += `<span>La perlita aparece como láminas alternas de ferrita y cementita.</span>`;
+  const rows = S.cons.map(c => `<span>${CONS[c.k].n}</span><span class="n">${fmt((ar[c.k] ?? 0)*100,1)} %</span><span class="n">${fmt(c.f*100,1)} %</span>`).join('');
+  h += `<div class="areas"><span class="h">Comprobación</span><span class="h n">Área imagen</span><span class="h n">Calculado</span>${rows}</div>`;
+  let note;
+  const m = S.micro;
+  if (S.arrest) note = `Reacción eutectoide en curso: colonias de perlita nacen en ${m.fa>0 ? 'la intercara ferrita/austenita' : m.fc>0 ? 'la red de cementita' : 'los límites de grano'} y crecen hacia la austenita restante.`;
+  else if (S.region === 'γ') note = 'Granos de austenita con el carbono disuelto de forma uniforme. Los límites de grano son donde nacerán las nuevas fases.';
+  else if (S.region === 'α + γ') note = 'La ferrita proeutectoide crece desde los límites de grano. Como casi no admite carbono, la austenita que queda se enriquece: compara su %C en la leyenda.';
+  else if (S.region === 'γ + Fe₃C') note = 'El carbono sobrante difunde hacia los límites de grano y precipita allí como una red de cementita.';
+  else if (S.region === 'α + Fe₃C') note = 'Microestructura final: la fase proeutectoide conserva la forma de los antiguos granos de austenita y la perlita ocupa el resto.';
+  else note = 'Ferrita casi pura: el poco carbono queda en solución o como cementita terciaria.';
+  h += `<span>${note} En la comparación, la fracción en masa se toma igual a la de área; las densidades difieren menos de un 3 %.</span>`;
+  $('#mc-cap').innerHTML = h;
+}
+/* ---------- Lectura ---------- */
+function renderReadout(){
+  const {C,T} = app, t = Math.round(T);
+  const kind = C < CA ? 'Hierro casi puro' : Math.abs(C-E) < 0.005 ? 'Acero eutectoide' : C < E ? 'Acero hipoeutectoide' : 'Acero hipereutectoide';
+  $('#ro-state').innerHTML = `${S.region} <small>${kind} con ${fmt(C)} %C a ${t} °C${S.arrest ? ` · reacción eutectoide al ${fmt(S.Xe*100,0)} %` : ''}</small>`;
+  const crit = [];
+  if (C <= E) crit.push(['A3', `${Math.round(A3(C))} °C`]); else crit.push(['Acm', `${Math.round(Acm(C))} °C`]);
+  crit.push(['A1', '727 °C']);
+  crit.push(['C / Fe', `${fmt(atomRatio(C)*100,1)} átomos C cada 100 Fe`]);
+  $('#ro-crit').innerHTML = crit.map(([a,b]) => `<span class="chip">${a} <b>${b}</b></span>`).join('');
+  $('#ro-phases').innerHTML = S.phases.map(p => `
+    <div class="prow"><span class="nm">${PH[p.k].name}<em>${PH[p.k].struct}</em></span><span class="pc">${fmt(p.f*100,1)} %</span>
+    <div class="bar"><span style="width:${(p.f*100).toFixed(2)}%;background:var(${PH[p.k].color})"></span></div>
+    <span class="cc">Contiene <span class="mono">${fmtC(p.c)} %C</span>${p.k==='c'?' (compuesto de composición fija)':''}</span></div>`).join('');
+  $('#ro-const').innerHTML = S.cons.map(c => `
+    <div class="prow"><span class="nm">${CONS[c.k].n}</span><span class="pc">${fmt(c.f*100,1)} %</span>
+    <div class="bar${CONS[c.k].striped?' striped':''}"><span style="width:${(c.f*100).toFixed(2)}%;background:var(${CONS[c.k].col})"></span></div></div>`).join('');
+  let ex; const P = S.phases;
+  if (S.arrest) ex = `A 727 °C la austenita con 0,76 %C se descompone en ferrita (0,022 %C) y cementita (6,67 %C) a la vez, en láminas alternas: es la perlita. Mientras dura esta reacción la temperatura se mantiene constante, porque se libera calor latente (al calentar ocurre lo contrario y se absorbe). Lleva ${fmt(S.Xe*100,0)} % de la austenita transformada.`;
+  else if (S.region === 'γ') ex = `Austenita homogénea. La red FCC tiene huecos octaédricos amplios (radio ≈ 0,53 Å), así que todo el carbono (${fmt(C)} %C) cabe en solución sólida intersticial, repartido de forma uniforme. Los límites de grano son los sitios donde nacerán las nuevas fases al enfriar.`;
+  else if (S.region === 'α + γ') ex = `Por debajo de A3 nace ferrita proeutectoide en los límites de grano de la austenita. La ferrita BCC solo admite ${fmtC(P[0].c)} %C porque sus huecos octaédricos son pequeños (≈ 0,19 Å). El carbono sobrante difunde hacia la austenita vecina, que se enriquece hasta ${fmt(P[1].c)} %C. Al seguir enfriando, la ferrita crece y la austenita se acerca a 0,76 %C.`;
+  else if (S.region === 'γ + Fe₃C') ex = `Por debajo de Acm la austenita ya no puede disolver todo el carbono. Los átomos de C migran hacia los límites de grano, donde la difusión es más rápida y nuclear cuesta menos energía, y allí precipita cementita proeutectoide (Fe₃C, 6,67 %C) como una red. La austenita queda con ${fmt(P[0].c)} %C.`;
+  else if (S.region === 'α + Fe₃C'){
+    if (C < E - 0.005) ex = `Por debajo de A1 la microestructura ya no cambia: ferrita proeutectoide sobre los antiguos límites de grano y perlita en el resto. Fíjate en la diferencia entre fases y microconstituyentes: solo hay dos fases (α y Fe₃C), pero la ferrita aparece en dos microconstituyentes, la proeutectoide y la que forma parte de la perlita.`;
+    else if (C > E + 0.005) ex = `Por debajo de A1 la red de cementita proeutectoide rodea a las colonias de perlita. Solo hay dos fases (α y Fe₃C), pero la cementita aparece en dos microconstituyentes: la red proeutectoide y las láminas de la perlita. Esa red es dura y frágil, por eso estos aceros suelen recibir un recocido de esferoidización.`;
+    else ex = `Composición eutectoide: toda la austenita se transformó a 727 °C en perlita, sin fase proeutectoide. Hay dos fases (α y Fe₃C) en un solo microconstituyente.`;
+  } else ex = `Ferrita casi pura. Con tan poco carbono no se forma perlita; el carbono queda en solución en la ferrita o precipita como cementita terciaria en los límites de grano.`;
+  $('#ro-explain').textContent = ex;
+}
+
+/* ---------- Curva térmica (misma escala vertical que el diagrama) ---------- */
+const th = $('#thermal'), TX0 = X0, TX1 = X1;
+let thXmax = 30;
+function drawThermalNow(){
+  const h = sim.hist, tEnd = h[h.length-1][0];
+  thXmax = Math.max(30, Math.ceil((tEnd+3)/10)*10);
+  const tx = t => TX0 + t/thXmax*(TX1-TX0);
+  let s = '';
+  for (const T of [600,700,800,900,1000,1100]) s += `<line class="grid-l" x1="${TX0}" x2="${TX1}" y1="${ys(T)}" y2="${ys(T)}"/>`;
+  for (const T of [500,600,800,1000,1100]) s += `<text class="tick" x="${TX0-6}" y="${ys(T)+3.5}" text-anchor="end">${T}</text>`;
+  s += `<text class="tick key" x="${TX0-6}" y="${ys(A1)+3.5}" text-anchor="end">727</text>`;
+  const step = thXmax <= 60 ? 10 : thXmax <= 150 ? 25 : 50;
+  for (let t=0; t<=thXmax; t+=step) s += `<text class="tick" x="${tx(t)}" y="${YB+15}" text-anchor="middle">${t}</text>`;
+  s += `<path class="ax" d="M${TX0} ${YT} V${YB} H${TX1}"/>`;
+  s += `<text class="tick" x="${(TX0+TX1)/2}" y="${YB+32}" text-anchor="middle">tiempo de animación (s, ilustrativo)</text>`;
+  s += `<text class="tick" transform="translate(14 ${(YT+YB)/2}) rotate(-90)" text-anchor="middle">Temperatura (°C)</text>`;
+  const crit = critList(app.C), close = crit.length === 2 && Math.abs(crit[1][1] - A1) < 18;
+  crit.forEach(([n, T], i) => {
+    if (T > 1100) return;
+    const y = ys(T), dy = (close && i === 0) ? 13 : -4;
+    s += `<line class="crit-l" x1="${TX0}" x2="${TX1}" y1="${y}" y2="${y}"/><text class="ln" x="${TX1-2}" y="${y+dy}" text-anchor="end">${n} · ${Math.round(T)} °C</text>`;
+  });
+  // curva coloreada por región
+  let seg = null, d = '', prev = null;
+  const flush = () => { if (seg && d) s += `<path class="curve" style="stroke:var(${REGION_COL[seg]})" d="${d}"/>`; };
+  for (const p of h){
+    const pt = `${tx(p[0]).toFixed(1)} ${ys(p[1]).toFixed(1)}`;
+    if (p[3] !== seg){ flush(); seg = p[3]; d = 'M' + (prev ? prev + ' L' : '') + pt; } else d += ' L' + pt;
+    prev = pt;
+  }
+  flush();
+  // meseta conceptual
+  const ie = h.findIndex(p => p[3] === 'e');
+  if (ie >= 0){ let je = ie; while (je+1 < h.length && h[je+1][3] === 'e') je++;
+    const xm = tx(h[je][0]) - 6;
+    s += `<text class="tie-lbl" x="${xm}" y="${ys(A1)+18}" text-anchor="end">meseta conceptual</text><text class="tie-lbl" x="${xm}" y="${ys(A1)+30}" text-anchor="end">(duración arbitraria)</text>`; }
+  const cur = sim.cursor >= 0 ? h[sim.cursor] : h[h.length-1];
+  s += `<line class="now-h" x1="${TX0}" x2="${TX1}" y1="${ys(cur[1])}" y2="${ys(cur[1])}"/><line class="now-l" x1="${tx(cur[0])}" x2="${tx(cur[0])}" y1="${YT}" y2="${YB}"/>`;
+  s += `<circle class="mark-ring" cx="${tx(cur[0])}" cy="${ys(cur[1])}" r="10"/><circle class="mark" cx="${tx(cur[0])}" cy="${ys(cur[1])}" r="5.5"/>`;
+  th.innerHTML = s;
+}
+let thDrag = false;
+function scrub(e){
+  if (sim.state === 'run' || sim.hist.length < 2) return;
+  const p = svgPoint(th, e), t = clamp((p.x-TX0)/(TX1-TX0)*thXmax, 0, sim.hist[sim.hist.length-1][0]);
+  let lo = 0, hi = sim.hist.length-1;
+  while (hi - lo > 1){ const mid = (lo+hi)>>1; if (sim.hist[mid][0] < t) lo = mid; else hi = mid; }
+  const i = (t - sim.hist[lo][0] < sim.hist[hi][0] - t) ? lo : hi;
+  sim.cursor = i; app.T = sim.hist[i][1]; app.Xe = sim.hist[i][2];
+  if (sim.state === 'idle' || sim.state === 'done') sim.state = 'pause';
+  update({silent:true}); drawThermal(); syncSim();
+}
+th.addEventListener('pointerdown', e => { thDrag = true; th.setPointerCapture(e.pointerId); scrub(e); });
+th.addEventListener('pointermove', e => { if (thDrag) scrub(e); });
+th.addEventListener('pointerup', () => thDrag = false);
+th.addEventListener('pointercancel', () => thDrag = false);
+
+/* ---------- Simulación ---------- */
+const R_COOL = 22;      // °C por segundo de animación: ilustrativo
+const ARREST_S = 4;     // duración de la meseta en la animación: arbitraria
+function simStep(dt){
+  if (sim.state !== 'run') return;
+  sim.t += dt;
+  const fr = frAt(app.C); let T = app.T, Xe = app.Xe;
+  if (Math.abs(T - A1) < 1e-6 && fr > 0 && ((sim.dir < 0 && Xe < 1) || (sim.dir > 0 && Xe > 0))){
+    Xe = clamp(Xe - sim.dir*dt/ARREST_S, 0, 1);
+  } else {
+    const slow = (!S.arrest && S.T > A1 && S.phases.length === 2) ? 0.55 : 1;
+    let nT = T + sim.dir*R_COOL*slow*dt;
+    if (fr > 0 && ((sim.dir < 0 && T > A1 && nT <= A1) || (sim.dir > 0 && T < A1 && nT >= A1))) nT = A1;
+    if (nT < A1 - 1e-6) Xe = 1; else if (nT > A1 + 1e-6) Xe = 0;
+    T = nT;
+    if (T <= 500 || T >= 1100){ T = clamp(T, 500, 1100); sim.state = 'done'; }
+  }
+  app.T = T; app.Xe = Xe;
+  update({});
+  sim.hist.push([sim.t, T, Xe, regionCode(S)]);
+  drawThermal(); syncSim();
+}
+function startOrResume(dir){
+  if (sim.state === 'run' && sim.dir === dir){ pauseToggle(); return; }
+  if (sim.state === 'pause' || sim.state === 'run'){
+    if (sim.cursor >= 0){ sim.hist = sim.hist.slice(0, sim.cursor+1); sim.t = sim.hist[sim.cursor][0]; sim.cursor = -1; }
+    if ((dir < 0 && app.T <= 500) || (dir > 0 && app.T >= 1100)) return newRun(dir);
+    sim.dir = dir; sim.state = 'run';
+  } else newRun(dir);
+  syncSim();
+}
+function newRun(dir){
+  if (dir < 0 && app.T <= 505){ app.T = 1050; app.Xe = 0; }
+  if (dir > 0 && app.T >= 1095){ app.T = 550; app.Xe = 1; }
+  update({silent:true});
+  sim.t = 0; sim.hist = [[0, app.T, app.Xe, regionCode(S)]]; sim.startT = app.T; sim.startXe = app.Xe; sim.cursor = -1;
+  sim.dir = dir; sim.state = 'run'; drawThermal(); syncSim();
+  showHint(dir < 0 ? `<b>Enfriando desde ${Math.round(app.T)} °C.</b> Observa el punto rojo bajar en el diagrama y en la curva; recibirás un aviso al cruzar cada temperatura crítica.`
+                   : `<b>Calentando desde ${Math.round(app.T)} °C.</b> Las transformaciones ocurren en sentido inverso.`);
+}
+function pauseToggle(){
+  if (sim.state === 'run'){ sim.state = 'pause'; }
+  else if (sim.state === 'pause'){ startOrResume(sim.dir || -1); return; }
+  syncSim(); drawThermal();
+}
+function resetSim(){
+  app.T = sim.startT; app.Xe = sim.startXe;
+  sim.t = 0; sim.state = 'idle'; sim.cursor = -1;
+  update({silent:true});
+  sim.hist = [[0, app.T, app.Xe, regionCode(S)]];
+  drawThermal(); syncSim();
+  showHint(`<b>Proceso reiniciado</b> en ${Math.round(app.T)} °C. Pulsa «Enfriar» o «Calentar».`);
+}
+function syncSim(){
+  const run = sim.state === 'run';
+  $('#cool').setAttribute('aria-pressed', run && sim.dir < 0); $('#heat').setAttribute('aria-pressed', run && sim.dir > 0);
+  $('#cool').textContent = run && sim.dir < 0 ? 'Enfriando…' : 'Enfriar';
+  $('#heat').textContent = run && sim.dir > 0 ? 'Calentando…' : 'Calentar';
+  const pb = $('#pause'); pb.disabled = !(run || sim.state === 'pause'); pb.textContent = sim.state === 'pause' ? 'Reanudar' : 'Pausar';
+  $('#reset').disabled = sim.hist.length < 2;
+  let st;
+  if (run) st = S.arrest ? `Reacción eutectoide en A1 · ${fmt(S.Xe*100,0)} %` : sim.dir < 0 ? `Enfriando · ${Math.round(app.T)} °C` : `Calentando · ${Math.round(app.T)} °C`;
+  else if (sim.state === 'pause') st = `En pausa · ${Math.round(app.T)} °C`;
+  else if (sim.state === 'done') st = 'Terminado · arrastra sobre la curva para revisar';
+  else st = 'Listo · pulsa Enfriar o Calentar';
+  $('#sim-status').textContent = st;
+}
+$('#cool').addEventListener('click', () => startOrResume(-1));
+$('#heat').addEventListener('click', () => startOrResume(1));
+$('#pause').addEventListener('click', pauseToggle);
+$('#reset').addEventListener('click', resetSim);
+
+/* ---------- Avisos contextuales ---------- */
+const hintEl = $('#hint');
+function showHint(html){
+  hintEl.innerHTML = html;
+  hintEl.classList.remove('flash'); void hintEl.offsetWidth; hintEl.classList.add('flash');
+}
+function transitionMsg(a, b){
+  const T = Math.round(app.T), k = a + '>' + b;
+  const toA1 = `<b>Llegaste a A1 (727 °C).</b> La austenita restante, con 0,76 %C, empieza a transformarse en perlita. Nueva fase: cementita (pestaña en «Celda»).`;
+  const fromA1 = `<b>La perlita se transformó en austenita.</b> Al calentar, la reacción eutectoide ocurre en sentido inverso.`;
+  const M = {
+    'g>ag': `<b>Cruzaste A3 (${T} °C).</b> Nace ferrita proeutectoide en los límites de grano y expulsa el carbono hacia la austenita. Nueva fase: ferrita BCC.`,
+    'ag>g': `<b>Cruzaste A3 (${T} °C).</b> La ferrita se disolvió: solo queda austenita FCC.`,
+    'g>gc': `<b>Cruzaste Acm (${T} °C).</b> El carbono sobrante precipita como cementita en los límites de grano. Nueva fase: cementita.`,
+    'gc>g': `<b>Cruzaste Acm (${T} °C).</b> La cementita se disolvió: solo queda austenita.`,
+    'ag>e': toA1, 'gc>e': toA1.replace(' Nueva fase: cementita (pestaña en «Celda»).', ' Nueva fase: ferrita (pestaña en «Celda»).'), 'g>e': toA1.replace('cementita (pestaña', 'ferrita y cementita (pestañas'),
+    'e>ac': `<b>Terminó la reacción eutectoide.</b> Ya no queda austenita; por debajo de A1 la microestructura no cambia.`,
+    'ac>e': `<b>Llegaste a A1 (727 °C).</b> La perlita empieza a transformarse en austenita. Nueva fase: austenita FCC.`,
+    'e>ag': fromA1, 'e>gc': fromA1, 'e>g': fromA1,
+    'a>ag': `<b>Cruzaste el límite de la ferrita (${T} °C).</b> Empieza a formarse austenita.`,
+    'ag>a': `<b>Solo queda ferrita (${T} °C).</b> Todo el carbono cabe en ella.`,
+  };
+  return M[k] || `<b>Cambio de región:</b> ahora estás en ${S.region} a ${T} °C. Revisa las fases presentes en la lectura de abajo.`;
+}
+
+/* ---------- Controles ---------- */
+const cR = $('#c-range'), tR = $('#t-range');
+function syncControls(){
+  cR.value = app.C; tR.value = Math.round(app.T);
+  $('#c-out').textContent = `${fmt(app.C)} %`; $('#t-out').textContent = `${Math.round(app.T)} °C`;
+  document.querySelectorAll('#presets button').forEach(b => b.setAttribute('aria-pressed', Math.abs(+b.dataset.c - app.C) < 0.001));
+}
+function manualSet(C, T, opts={}){
+  const nC = Math.round(clamp(C,0,2)*100)/100, nT = clamp(T,500,1100);
+  const cChanged = Math.abs(nC - app.C) > 1e-9;
+  app.C = nC; app.T = nT; app.Xe = nT <= A1 ? 1 : 0;
+  update({silent: cChanged || opts.silent});
+  sim.state = 'idle'; sim.t = 0; sim.cursor = -1; sim.startT = app.T; sim.startXe = app.Xe;
+  sim.hist = [[0, app.T, app.Xe, regionCode(S)]];
+  drawThermal(); syncSim();
+}
+let prevCode = null;
+function update(opts={}){
+  syncControls();
+  const key = app.C.toFixed(2)+'|'+app.T.toFixed(1)+'|'+app.Xe.toFixed(3);
+  if (key === app.lastKey && !opts.force) return;
+  app.lastKey = key;
+  S = computeState(app.C, app.T, app.Xe);
+  const code = regionCode(S);
+  if (prevCode && code !== prevCode && !opts.silent) showHint(transitionMsg(prevCode, code));
+  prevCode = code;
+  crystal?.update(S); renderStatus(); markAll(); renderActive();
+}
+cR.addEventListener('input', () => manualSet(+cR.value, app.T));
+tR.addEventListener('input', () => manualSet(app.C, +tR.value));
+document.querySelectorAll('#presets button').forEach(b => b.addEventListener('click', () => {
+  manualSet(+b.dataset.c, app.T > 1000 ? app.T : 1000, {silent:true});
+  const C = app.C, kind = Math.abs(C-E) < 0.005 ? 'eutectoide' : C < E ? 'hipoeutectoide (menos de 0,76 %C)' : 'hipereutectoide (más de 0,76 %C)';
+  showHint(`<b>Acero de ${fmt(C)} %C seleccionado:</b> ${kind}. Parte de austenita a ${Math.round(app.T)} °C; pulsa «Enfriar» para seguir su transformación.`);
+}));
+$('#micro-mode').addEventListener('change', e => { app.microMode = e.target.value; micro.refresh(); microCaption(); });
+
+/* ---------- Diagrama TTT de referencia (acero eutectoide, esquemático) ---------- */
+// [T °C, inicio (s), fin (s)] — forma aproximada a los diagramas publicados para un acero al carbono eutectoide
+const TTT = [[725,1500,30000],[715,120,4000],[700,15,300],[680,4,70],[650,1.5,15],[600,0.8,7],[550,0.6,5],[500,0.8,8],[450,2,30],[400,5,100],[350,15,400],[300,50,1500],[250,200,6000],[220,500,20000]];
+function drawTTT(){
+  const L = 64, R = 600, T0 = 18, B = 350;
+  const tx = t => L + (Math.log10(t)+1)/6*(R-L), ty = T => B - T/800*(B-T0);
+  const line = (k) => TTT.map((p,i) => `${i?'L':'M'}${tx(p[k]).toFixed(1)} ${ty(p[0]).toFixed(1)}`).join(' ');
+  const half = TTT.map((p,i) => `${i?'L':'M'}${tx(Math.sqrt(p[1]*p[2])).toFixed(1)} ${ty(p[0]).toFixed(1)}`).join(' ');
+  let s = '';
+  for (let T=100; T<=800; T+=100) s += `<line class="grid-l" x1="${L}" x2="${R}" y1="${ty(T)}" y2="${ty(T)}"/>`;
+  for (let e=-1; e<=5; e++) s += `<line class="grid-l" x1="${tx(10**e)}" x2="${tx(10**e)}" y1="${T0}" y2="${B}"/>`;
+  for (let T=0; T<=800; T+=100) s += `<text class="tick" x="${L-6}" y="${ty(T)+3.5}" text-anchor="end">${T}</text>`;
+  const sup = {'-1':'⁻¹','2':'²','3':'³','4':'⁴','5':'⁵'};
+  for (let e=-1; e<=5; e++) s += `<text class="tick" x="${tx(10**e)}" y="${B+15}" text-anchor="middle">${e===0?'1':e===1?'10':'10'+sup[e]}</text>`;
+  s += `<path class="ax" d="M${L} ${T0} V${B} H${R}"/>`;
+  s += `<text class="tick" x="${(L+R)/2}" y="${B+34}" text-anchor="middle">tiempo de mantenimiento (s, escala logarítmica, valores orientativos)</text>`;
+  s += `<text class="tick" transform="translate(16 ${(T0+B)/2}) rotate(-90)" text-anchor="middle">Temperatura (°C)</text>`;
+  // líneas horizontales: A1, Ms, M50, M90
+  for (const [T, n] of [[727,'A1 · 727 °C'],[220,'Ms ≈ 220 °C'],[160,'M50 ≈ 160 °C'],[100,'M90 ≈ 100 °C']]) s += `<line class="ttt-m" x1="${L}" x2="${R}" y1="${ty(T)}" y2="${ty(T)}"/><text class="ln" x="${L+4}" y="${ty(T)-4}">${n}</text>`;
+  s += `<path class="ttt-c" d="${line(1)}"/><path class="ttt-c" d="${line(2)}"/><path class="ttt-h" d="${half}"/>`;
+  // rótulos de curvas y regiones
+  s += `<text class="ttt-r sub" x="${tx(0.85)}" y="${ty(625)}" text-anchor="end">inicio</text><text class="ttt-r sub" x="${tx(9)}" y="${ty(596)}">fin</text><text class="ttt-r sub" x="${tx(4.7)}" y="${ty(645)}" text-anchor="middle">50 %</text>`;
+  s += `<text class="ttt-r" x="${tx(10)}" y="${ty(765)}" text-anchor="middle">Austenita estable</text>`;
+  s += `<text class="ttt-r" x="${tx(0.14)}" y="${ty(420)}">Austenita</text><text class="ttt-r sub" x="${tx(0.14)}" y="${ty(420)+13}">inestable</text>`;
+  s += `<text class="ttt-r sub" x="${tx(6.5)}" y="${ty(672)}" text-anchor="middle">A + P</text><text class="ttt-r sub" x="${tx(32)}" y="${ty(335)}">A + B</text>`;
+  s += `<text class="ttt-r" x="${tx(2000)}" y="${ty(680)}">Perlita gruesa</text><text class="ttt-r" x="${tx(200)}" y="${ty(590)}">Perlita fina</text>`;
+  s += `<text class="ttt-r" x="${tx(800)}" y="${ty(465)}">Bainita superior</text><text class="ttt-r" x="${tx(5000)}" y="${ty(300)}">Bainita inferior</text>`;
+  s += `<text class="ttt-r" x="${tx(3)}" y="${ty(186)}">Martensita + austenita</text>`;
+  s += `<text class="ttt-r sub" x="${tx(7)}" y="${ty(545)+4}">← nariz ≈ 540 °C</text>`;
+  $('#ttt-svg').innerHTML = s;
+}
+function tttWarn(){
+  const C = app.C, w = $('#ttt-warn');
+  w.innerHTML = Math.abs(C - E) <= 0.02
+    ? `Tu acero actual (${fmt(C)} %C) coincide con la composición de referencia de este ejemplo.`
+    : `Tu acero actual tiene <b>${fmt(C)} %C</b>: este TTT <b>no le corresponde</b>. En un acero ${C < E ? 'hipoeutectoide aparece además una curva de inicio de ferrita proeutectoide' : 'hipereutectoide aparece además una curva de inicio de cementita proeutectoide'} por encima de la nariz, y las curvas se desplazan.`;
+}
+/* ---------- Celda unitaria (Three.js) ---------- */
+let crystal = null;
+async function initCrystal(){
+  const host = $('#crystal-stage');
+  let THREE, OrbitControls;
+  try { THREE = await import('three'); ({OrbitControls} = await import('three/addons/controls/OrbitControls.js')); }
+  catch(e){ host.innerHTML = '<div class="fallback">No se pudo cargar el visor 3D. Las otras vistas siguen funcionando.</div>'; return null; }
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({antialias:true, alpha:true}); }
+  catch(e){ host.innerHTML = '<div class="fallback">Este navegador no tiene WebGL activo, así que la vista 3D no está disponible.</div>'; return null; }
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75)); host.appendChild(renderer.domElement);
+  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(32, 1, 0.1, 400);
+  camera.position.set(16, 13, 26);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.enablePan = false; controls.minDistance = 10; controls.maxDistance = 100;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x556677, 1.6));
+  const dl = new THREE.DirectionalLight(0xffffff, 1.6); dl.position.set(20, 30, 25); scene.add(dl);
+  const sphere = new THREE.SphereGeometry(1, 20, 14);
+  const ro = new ResizeObserver(() => { const w = host.clientWidth, h = host.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); });
+  ro.observe(host);
+  const col = n => new THREE.Color(tok(n) || '#888');
+  const dummy = new THREE.Object3D();
+  const lineMat = new THREE.LineBasicMaterial({color:col('--muted'), transparent:true, opacity:.65});
+  const catMat = new THREE.MeshStandardMaterial({color:col('--catom'), roughness:.35});
+  const siteMat = new THREE.MeshStandardMaterial({color:col('--muted'), roughness:.6, transparent:true, opacity:.35, depthWrite:false});
+  const SCALE = 2.6;
+  let sel = 'g', cur = null, camAnim = null, present = ['g'], known = new Set(['g']);
+
+  function fe3cFrac(){ // Pnma, posiciones fraccionarias de 12 Fe y 4 C
+    const ops = [p=>[p[0],p[1],p[2]], p=>[.5-p[0],-p[1],.5+p[2]], p=>[-p[0],.5+p[1],-p[2]], p=>[.5+p[0],.5-p[1],.5-p[2]],
+                 p=>[-p[0],-p[1],-p[2]], p=>[.5+p[0],p[1],.5-p[2]], p=>[p[0],.5-p[1],p[2]], p=>[.5-p[0],.5+p[1],.5+p[2]]];
+    const orbit = base => { const out=[], seen=new Set(); for (const op of ops){ const q=op(base).map(v=>((v%1)+1)%1); const key=q.map(v=>v.toFixed(3)).join(','); if(!seen.has(key)){seen.add(key); out.push(q);} } return out; };
+    return {fe:[...orbit([0.036,0.25,0.837]), ...orbit([0.182,0.065,0.334])], c:orbit([0.877,0.25,0.444])};
+  }
+  function edges(dims){
+    const [a,b,c] = dims, P = [[0,0,0],[a,0,0],[a,b,0],[0,b,0],[0,0,c],[a,0,c],[a,b,c],[0,b,c]], pts = [];
+    [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]].forEach(([p,q]) => pts.push(...P[p], ...P[q]));
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts,3));
+    return new THREE.LineSegments(g, lineMat);
+  }
+  function buildCell(key){
+    const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner);
+    const fe = [], oct = []; let cAt = [], dims;
+    const q = [0, .5, 1];
+    if (key === 'g'){
+      dims = [3.60,3.60,3.60];
+      for (const x of q) for (const y of q) for (const z of q){ const nh = [x,y,z].filter(v=>v===.5).length; if (nh===0 || nh===2) fe.push([x,y,z]); else oct.push([x,y,z]); }   // octaédricos: centro + 12 aristas
+      cAt = [[.5,.5,.5]];   // ejemplo: hueco octaédrico del centro de la celda FCC
+    } else if (key === 'a'){
+      dims = [2.866,2.866,2.866];
+      for (const x of q) for (const y of q) for (const z of q){ const nh = [x,y,z].filter(v=>v===.5).length; if (nh===0 || nh===3) fe.push([x,y,z]); else oct.push([x,y,z]); }   // octaédricos: 6 caras + 12 aristas
+      cAt = [[.5,1,.5]];    // ejemplo: hueco octaédrico en el centro de la cara superior de la celda BCC
+    } else {
+      dims = [5.09,6.74,4.52]; const f = fe3cFrac(); fe.push(...f.fe); cAt = f.c;
+    }
+    inner.position.set(-dims[0]/2, -dims[1]/2, -dims[2]/2);
+    const abs = p => [p[0]*dims[0], p[1]*dims[1], p[2]*dims[2]];
+    const feMat = new THREE.MeshStandardMaterial({color:col(PH[key].color), roughness:.45, metalness:.2});
+    const inst = (geo, mat, list, s) => { const m = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length)); list.forEach((p,i) => { dummy.position.set(...abs(p)); dummy.scale.setScalar(s); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); }); m.count = list.length; return m; };
+    inner.add(inst(sphere, feMat, fe, key === 'c' ? 0.42 : 0.45), edges(dims));
+    if (cAt.length) inner.add(inst(sphere, catMat, cAt, 0.3));
+    const occ = new Set(cAt.map(p => p.join()));
+    const vac = oct.filter(p => !occ.has(p.join()));   // sitios octaédricos vacíos (sin el que ocupa el C de ejemplo)
+    if (vac.length) inner.add(inst(sphere, siteMat, vac, 0.22));
+    g.scale.setScalar(0.001);
+    return {key, g, dims, feMat, s:0.001};
+  }
+  function show(key){
+    if (cur && cur.key === key) return;
+    if (cur){ scene.remove(cur.g); }
+    cur = buildCell(key); scene.add(cur.g);
+    camAnim = {from: camera.position.length(), to: Math.max(...cur.dims)*SCALE*3.9, t: reduceMotion ? 1 : 0};
+  }
+  const tabs = [...document.querySelectorAll('[data-ph]')];
+  function syncTabs(){
+    tabs.forEach(b => { const k = b.dataset.ph, on = present.includes(k);
+      b.disabled = !on; b.setAttribute('aria-selected', k === sel); b.tabIndex = k === sel ? 0 : -1; if (!on || k === sel) b.classList.remove('new'); });
+  }
+  tabs.forEach(b => b.addEventListener('click', () => { if (b.disabled) return; sel = b.dataset.ph; show(sel); syncTabs(); caption(); }));
+  function update(st){
+    present = st.phases.map(p => p.k);
+    for (const k of present) if (!known.has(k) && k !== sel) document.querySelector(`[data-ph="${k}"]`).classList.add('new');
+    known = new Set(present);
+    if (!present.includes(sel)) sel = st.phases.reduce((a,b) => b.f > a.f ? b : a).k;
+    show(sel); syncTabs(); caption();
+  }
+  const perCells = r => r > 1e-9 ? `1 átomo de C cada ${fmt(1/r, 0)} celdas` : 'ningún átomo de C';
+  function caption(){
+    const p = S.phases.find(q => q.k === sel); if (!p) return;
+    const r = atomRatio(p.c); let h;
+    if (sel === 'g') h = `<span><b>Austenita γ · cúbica centrada en las caras (FCC)</b> · a = 3,60 Å</span>
+      <span>Se dibujan 14 átomos de Fe (8 vértices y 6 caras), pero a esta celda le corresponden <b>4</b>: 8 × ⅛ + 6 × ½ = 4, porque cada vértice se comparte con 8 celdas y cada cara con 2.</span>
+      <span>El carbono está en solución sólida intersticial: con ${fmtC(p.c)} %C hay en promedio ${perCells(4*r)}.</span>`;
+    else if (sel === 'a') h = `<span><b>Ferrita α · cúbica centrada en el cuerpo (BCC)</b> · a = 2,87 Å</span>
+      <span>Se dibujan 9 átomos de Fe (8 vértices y 1 central); a esta celda le corresponden <b>2</b>: 8 × ⅛ + 1 = 2.</span>
+      <span>La ferrita disuelve muy poco carbono: con ${fmtC(p.c)} %C hay en promedio ${perCells(2*r)}.</span>`;
+    else h = `<span><b>Cementita Fe₃C · ortorrómbica</b> · a = 5,09 · b = 6,74 · c = 4,52 Å</span>
+      <span>A esta celda le corresponden <b>12 Fe y 4 C</b>: proporción fija 3 : 1, es decir, 6,67 %C. A diferencia de la ferrita y la austenita, aquí el carbono forma parte de la estructura: es un compuesto, no una solución sólida.</span>`;
+    const leg = sel === 'c'
+      ? `<span><span class="dot" style="background:var(--cem)"></span>Fe</span><span><span class="dot" style="background:var(--catom)"></span>C</span>`
+      : `<span><span class="dot" style="background:var(${PH[sel].color})"></span>Fe</span><span><span class="dot" style="background:var(--catom)"></span>C: ejemplo didáctico de ocupación intersticial en un hueco octaédrico (${sel === 'g' ? 'centro de la celda' : 'centro de una cara'}). No representa la concentración real de la celda.</span><span><span class="site"></span>Sitio octaédrico vacío</span><span>${sel === 'g' ? 'Se dibujan 13 sitios (1 central + 12 aristas), pero a la celda le corresponden <b>4</b>: 1 + 12 × ¼, porque cada arista se comparte con 4 celdas.' : 'Se dibujan 18 sitios (6 caras + 12 aristas), pero a la celda le corresponden <b>6</b>: 6 × ½ + 12 × ¼, porque cada cara se comparte con 2 celdas y cada arista con 4.'}</span>`;
+    h += `<span class="legend">${leg}<span>Radios dibujados reducidos para que se vea la geometría.</span></span>`;
+    $('#cr-cap').innerHTML = h;
+  }
+  function applyTheme(){
+    lineMat.color.copy(col('--muted')); catMat.color.copy(col('--catom')); siteMat.color.copy(col('--muted'));
+    if (cur) cur.feMat.color.copy(col(PH[cur.key].color));
+  }
+  function step(dt){
+    if (activeTab !== 'celda') return;   // el visor solo trabaja cuando su pestaña está abierta
+    if (cur){ cur.s += (1 - cur.s)*(reduceMotion ? 1 : 1 - Math.exp(-dt*6)); cur.g.scale.setScalar(cur.s*SCALE); }
+    if (camAnim && camAnim.t < 1){ camAnim.t = Math.min(1, camAnim.t + dt*1.5); const e = camAnim.t*camAnim.t*(3-2*camAnim.t); camera.position.setLength(camAnim.from + (camAnim.to - camAnim.from)*e); }
+    controls.update(); renderer.render(scene, camera);
+  }
+  return {update, step, applyTheme};
+}
+/* ---------- Navegación móvil: una vista a la vez, todas sincronizadas ---------- */
+const TABS = ['diag','curva','celda','micro','fases','ttt'];
+const stale = new Set(TABS);
+let activeTab = 'diag';
+function markAll(){ TABS.forEach(t => stale.add(t)); }
+function renderTab(t){
+  if (t === 'diag') drawDiagram();
+  else if (t === 'curva') drawThermalNow();
+  else if (t === 'micro'){ micro.update(S); microCaption(); }
+  else if (t === 'fases') renderReadout();
+  else if (t === 'ttt') tttWarn();
+  stale.delete(t);
+}
+function renderActive(){ if (stale.has(activeTab)) renderTab(activeTab); }
+// la curva solo se redibuja si está a la vista; si no, queda pendiente
+function drawThermal(){ if (activeTab === 'curva') drawThermalNow(); else stale.add('curva'); }
+function renderStatus(){
+  const reg = $('#st-reg'); reg.textContent = S.region; reg.style.background = `var(${REGION_COL[regionCode(S)]})`;
+  const ct = `${fmt(app.C)} %C · ${Math.round(app.T)} °C`;
+  $('#st-ct').textContent = ct; $('#sheet-sum').textContent = ct;
+}
+const tabBtns = [...document.querySelectorAll('[data-tab]')];
+function openTab(t){
+  if (!TABS.includes(t)) return;
+  activeTab = t;
+  TABS.forEach(k => { $('#tab-' + k).hidden = k !== t; });
+  tabBtns.forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  renderActive();
+  window.scrollTo(0, 0);
+}
+tabBtns.forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
+// hoja de ajustes
+const sheet = $('#sheet'), scrim = $('#scrim'), openBtn = $('#open-sheet');
+function setSheet(open){ sheet.hidden = !open; scrim.hidden = !open; openBtn.setAttribute('aria-expanded', open); }
+openBtn.addEventListener('click', () => setSheet(sheet.hidden));
+$('#close-sheet').addEventListener('click', () => setSheet(false));
+scrim.addEventListener('click', () => setSheet(false));
+document.querySelectorAll('[data-dc]').forEach(b => b.addEventListener('click', () => manualSet(app.C + +b.dataset.dc, app.T)));
+document.querySelectorAll('[data-dt]').forEach(b => b.addEventListener('click', () => manualSet(app.C, Math.round(app.T) + +b.dataset.dt)));
+// altura real del mando inferior, para que nada quede tapado
+const dock = $('#dock');
+const setDockH = () => document.documentElement.style.setProperty('--dock-h', (dock.getBoundingClientRect().height - (parseFloat(getComputedStyle(dock).paddingBottom) - 6)) + 'px');
+new ResizeObserver(setDockH).observe(dock); setDockH();
+
+/* ---------- Bucle y arranque ---------- */
+buildDiagram(); drawTTT(); update({force:true, silent:true}); drawThermal(); syncSim();
+let last = performance.now();
+function tick(now){
+  const dt = Math.min(0.05, (now-last)/1000); last = now;
+  simStep(dt);
+  micro.step(); crystal?.step(dt);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+initCrystal().then(c => { crystal = c; if (c) c.update(S); });
+const themeChange = () => { crystal?.applyTheme(); micro.refresh(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeChange);
+new MutationObserver(themeChange).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+if (location.hash === '#enfriar') newRun(-1);
+else if (TABS.includes(location.hash.slice(1))) openTab(location.hash.slice(1));
+window.__lab = { app, sim, get S(){ return S; }, manualSet, newRun, pauseToggle, resetSim, micro };
+</script>
+</body>
+</html>

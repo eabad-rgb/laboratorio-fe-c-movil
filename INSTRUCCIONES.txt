@@ -1,0 +1,19 @@
+Laboratorio Fe–C | versión móvil
+
+CONTENIDO
+- index.html: página principal que abrirán los estudiantes
+- .nojekyll: indica a GitHub Pages que publique el sitio estático sin Jekyll
+
+PUBLICACIÓN EN GITHUB PAGES
+1. Crea un repositorio público llamado laboratorio-fe-c-movil.
+2. En el repositorio, elige Add file > Upload files.
+3. Sube index.html (y opcionalmente .nojekyll). No subas el ZIP sin descomprimir.
+4. En Settings > Pages > Build and deployment, selecciona Deploy from a branch.
+5. Branch: main, carpeta: /(root), y Save.
+6. Abre el enlace en Settings > Pages para comprobar el sitio.
+7. Genera el código QR con la URL pública definitiva.
+
+NOTAS
+- No modifica la versión para proyector.
+- El archivo usa Three.js desde jsDelivr y fuentes de Google; requiere Internet.
+- Es un sitio estático. El QR debe apuntar a la URL pública, no al archivo .html local.
